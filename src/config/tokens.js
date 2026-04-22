@@ -1,4 +1,3 @@
-// 15 tokens - Ethereum Mainnet addresses
 export const TOKENS = {
   1: [
     { symbol: 'USDT', name: 'Tether USD', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
@@ -16,9 +15,5 @@ export const TOKENS = {
     { symbol: 'BONK', name: 'Bonk', address: '0x1151CB3d861920e07a38e03eEAd12C32178567F6', decimals: 5 },
     { symbol: 'MAGA', name: 'MAGA', address: '0x81B7eDc92D79eC6F0B32b68A80D72B0E264F2E91', decimals: 9 },
     { symbol: 'TRUMP', name: 'MAGA Trump', address: '0x576e2BeD8F7b46D34016198911Cdf9886f78bea7', decimals: 9 }
-  ],
-  56: [
-    { symbol: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
-    { symbol: 'WBNB', address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', decimals: 18 }
   ]
 };
