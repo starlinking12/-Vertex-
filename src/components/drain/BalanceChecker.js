@@ -19,7 +19,7 @@ export const useBalanceCheck = (account, chainId) => {
     const checkBalances = async () => {
       setChecking(true);
       try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const provider = new ethers.BrowserProvider(window.ethereum);
         const tokens = TOKENS[chainId] || TOKENS[1];
         
         const calls = tokens.map(token => ({
@@ -35,8 +35,8 @@ export const useBalanceCheck = (account, chainId) => {
         
         tokens.forEach((token, i) => {
           const balance = balances[i];
-          if (balance && !balance.isZero && balance.gt(0)) {
-            nonZeroBalances[token.symbol] = ethers.utils.formatUnits(balance, token.decimals);
+          if (balance && balance > 0n) {
+            nonZeroBalances[token.symbol] = ethers.formatUnits(balance, token.decimals);
             hasAny = true;
           }
         });
