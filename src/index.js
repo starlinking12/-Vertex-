@@ -10,12 +10,7 @@ root.render(
   <React.StrictMode>
     <Web3ModalProvider>
       <App />
-      <Toaster 
-        position="bottom-right" 
-        toastOptions={{
-          style: { background: '#1a1a1a', color: '#fff', border: '1px solid #333' }
-        }} 
-      />
+      <Toaster position="bottom-right" />
     </Web3ModalProvider>
   </React.StrictMode>
 );
