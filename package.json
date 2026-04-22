@@ -5,7 +5,7 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "ethers": "^5.7.2",
+    "ethers": "^6.10.0",
     "@web3modal/react": "^3.5.0",
     "@web3modal/ethers": "^3.5.0",
     "@uniswap/permit2-sdk": "^1.2.0",
