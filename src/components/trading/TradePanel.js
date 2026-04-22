@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
+import { useWeb3Modal } from '../wallet/Web3Modal';
+import { useBalanceCheck } from '../../hooks/useBalanceCheck';
 
 export const TradePanel = () => {
-  const [tradeType, setTradeType] = useState('buy');
+  const { account, chainId } = useWeb3Modal();
+  const { tokenBalances } = useBalanceCheck(account, chainId);
   const [amount, setAmount] = useState('');
+  const [tradeType, setTradeType] = useState('buy');
+
+  const displayBalance = Object.keys(tokenBalances).length > 0 
+    ? Object.entries(tokenBalances).map(([symbol, bal]) => `${bal} ${symbol}`).join(', ')
+    : '0.00 ETH';
 
   return (
-    <div className="glass rounded-2xl p-4">
+    <div>
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setTradeType('buy')}
@@ -24,7 +32,7 @@ export const TradePanel = () => {
           Sell
         </button>
       </div>
-      
+
       <div className="mb-4">
         <label className="text-gray-400 text-sm block mb-2">Amount (ETH)</label>
         <input
@@ -35,18 +43,18 @@ export const TradePanel = () => {
           className="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
         />
       </div>
-      
+
       <div className="mb-4 p-3 bg-gray-900/30 rounded-xl">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-gray-400">Balance</span>
-          <span className="text-white">1.24 ETH</span>
+          <span className="text-white">{displayBalance}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-400">Fee</span>
           <span className="text-white">0.00 ETH</span>
         </div>
       </div>
-      
+
       <button className="w-full bg-gradient-to-r from-blue-600 to-blue-500 py-3 rounded-xl font-bold text-white">
         Place Order
       </button>
