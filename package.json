@@ -6,7 +6,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "ethers": "^5.7.2",
-    "@web3modal/ethers": "^2.0.0",
+    "@web3modal/ethers": "^5.1.11",
     "react-hot-toast": "^2.4.0",
     "lightweight-charts": "^4.1.0"
   },
